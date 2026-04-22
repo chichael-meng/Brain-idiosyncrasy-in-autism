@@ -52,7 +52,7 @@ Various custom functions used for analysis.
 Visually represent group differences in Variability with raincloud plots. This code was used to generate Fig. 3, S1, and S2 using the results from **GroupVarComparison.Rmd**, which are included in **data/group_diff**
 ![Figure 3](https://github.com/chichael-meng/Images/blob/main/fig%203.png)
 
-### ScatteplotGAM.RMD
+### ScatterplotGAM.RMD
 Evaluate brain-behaviour correlations and graphically represent them with scatterplots. This code was used to generate Tables S2 and S4 and Figures 4, and S3-S7.
 ![Figure 4](https://github.com/chichael-meng/Images/blob/main/fig%204.png)
 

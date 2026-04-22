@@ -23,6 +23,195 @@ if (var.type == 'var.tdc'){
 }
 var.type <- sym(var.type)
 
+df.signif <- read.csv(paste('data/group_diff/group_var_stats_', str_split(var.type, '.')[[1]][2], '.csv'), row.names = 1)
+
+```
+
+```{r}
+#Three-Group Raincloud Plot (TDC vs ASC-IA vs ASC-II) (Fig 3B, S1B, S1D)
+#3B = whole, S1B = within, S1D = TDC
+
+three.colours <- c('TDC' = 'blue', 'ASC-IA' = '#ff781f', 'ASC-II' = '#c50171')
+
+three.raincloud <- df.var.behav %>% 
+  mutate(group = fct_relevel(group, 'ASC-II', 'ASC-IA', 'TDC')) %>% 
+  ggplot(aes(x=group, y=!!var.type, colour = group, fill = group)) +
+  geom_rain(point.args = list(size = 3.5)) +
+  geom_signif(comparisons = list(c("TDC", "ASC-IA"), c("TDC","ASC-II"), c("ASC-IA", "ASC-II")),
+              annotation = as.vector(symnum(df.signif$p.fwe.group[1:3], cutpoints = c(0, 0.001, 0.01, 0.05, Inf), 
+                                  symbols = c("***", "**", "*", "NS."))),
+              map_signif_level = TRUE, step_increase = 0.1, 
+              textsize = 8, colour = 'black') +
+  theme(text = element_text(face = "bold"))+
+  ylab(bquote(bold(VAR[.(var.label)])))+labs(fill = 'Group')+
+  theme(axis.text.x=element_text(size=23, face='bold'), axis.text.y=element_text(size=23, face='bold'),
+        axis.title.x=element_text(size=27, face='bold'), axis.title.y=element_blank(),
+        legend.position = 'none') +
+  scale_colour_manual(values=three.colours) + 
+  scale_fill_manual(values= alpha(three.colours, 0.5)) + 
+  coord_flip()
+plot(three.raincloud)
+```
+ 
+```{r}
+#save Three-Group Raincloud Plot (Fig. 3B)
+#3B = whole, S1B = within, S1D = TDC
+
+#alternatively use .png, .jpg, etc. as desired
+if (var.type == 'var.whole'){
+  file.name <- paste('figures/fig_3/raincloud_', tolower(var.label), '_3group.tiff', sep = '')
+} else{
+  file.name <- paste('figures/fig_3/raincloud', substr(var.type,5, 50), '_3group_male.tiff', sep = '')
+}
+
+ggsave(file.name, three.raincloud, width=2400, height=1600, units = 'px', dpi=300)
+```
+ 
+```{r}
+#Two-Group Raincloud Plot (TDC vs ASC-IA vs ASC-II) (Fig 3A, S1A, S1C)
+
+two.colours <- c('TDC' = 'blue', 'ASC' = 'red')
+
+two.raincloud <- df.var.behav %>% 
+  ggplot(aes(x=group.2, y=!!var.type, colour = group.2, fill = group.2)) +
+  geom_rain(point.args = list(size = 3.5)) +
+  geom_signif(comparisons = list(c("TDC", "ASC")),
+              annotation = as.vector(symnum(df.signif$p.group[4], cutpoints = c(0, 0.001, 0.01, 0.05, Inf), 
+                                  symbols = c("***", "**", "*", "NS."))),
+              map_signif_level = TRUE, step_increase = 0.1, 
+              textsize = 8, colour = 'black') +
+  theme(text = element_text(face = "bold"))+
+  ylab(bquote(bold(VAR[.(var.label)])))+labs(fill = 'Group')+
+  theme(axis.text.x=element_text(size=23, face='bold'), axis.text.y=element_text(size=23, face='bold'),
+        axis.title.x=element_text(size=27, face='bold'), axis.title.y=element_blank(),
+        legend.position = 'none') +
+  scale_colour_manual(values=two.colours) + 
+  scale_fill_manual(values= alpha(two.colours, 0.5)) + 
+  coord_flip()
+plot(two.raincloud)
+```
+ 
+```{r}
+#save Two-Group Raincloud Plot (Fig 3A, S1A, S1C)
+
+#alternatively use .png, .jpg, etc.
+if (var.type == 'var.whole'){
+  file.name <- paste('figures/fig_3/raincloud_', tolower(var.label), '_2group.tiff', sep = '')
+} else{
+  file.name <- paste('figures/fig_s1/raincloud', substr(var.type,5, 50), '_2group_male.tiff', sep = '')
+}
+
+ggsave(file.name, two.raincloud, width=2400, height=1600, units = 'px', dpi=300)
+```
+ 
+```{r}
+#ADHD Raincloud Plot (ASC-IA + ADHD vs ASC-IA - ADHD vs ASC-II + ADHD vs ASC-II - ADHD) (Fig S2B,D,F)
+
+adhd.colours <- c('ASC-IA + ADHD' = '#f7b801', 'ASC-IA - ADHD' = '#ff781f', 'ASC-II + ADHD' = '#a668e3', 'ASC-II - ADHD' =  '#c50171')
+
+adhd.raincloud <- df.var.behav[df.var.behav$group.adhd != 'TDC - ADHD',] %>% 
+  mutate(group.adhd = fct_relevel(group.adhd, 'ASC-II - ADHD', 'ASC-II + ADHD', 'ASC-IA - ADHD', 'ASC-IA + ADHD')) %>%
+  ggplot(aes(x=group.adhd, y=!!var.type, colour = group.adhd, fill = group.adhd)) +
+  geom_rain(point.args = list(size = 3.5)) +
+  geom_signif(comparisons = list(c("ASC-IA + ADHD", "ASC-IA - ADHD"),
+                                 c("ASC-IA + ADHD", "ASC-II + ADHD"),
+                                 c("ASC-IA + ADHD", "ASC-II - ADHD"),
+                                 c("ASC-IA - ADHD", "ASC-II + ADHD"),
+                                 c("ASC-IA - ADHD", "ASC-II - ADHD"),
+                                 c("ASC-II + ADHD", "ASC-II - ADHD")),
+              annotation = as.vector(symnum(df.signif$p.fwe.group[5:10], cutpoints = c(0, 0.001, 0.01, 0.05, Inf),
+                                  symbols = c("***", "**", "*", "NS."))),
+              map_signif_level = TRUE, step_increase = 0.1,
+              textsize = 4, colour = 'black') +
+  theme(text = element_text(face = "bold"))+
+  ylab(bquote(bold(VAR[.(var.label)])))+labs(fill = 'Group')+
+  theme(axis.text.x=element_text(size=23, face='bold'), axis.text.y=element_text(size=15, face='bold'),
+        axis.title.x=element_text(size=27, face='bold'), axis.title.y=element_blank(),
+        legend.position = 'none') +
+  scale_colour_manual(values=adhd.colours) + 
+  scale_fill_manual(values= alpha(adhd.colours, 0.5)) + 
+  #ylim(NA, 0.8001) +
+  coord_flip()
+plot(adhd.raincloud)
+```
+ 
+```{r}
+#save ADHD and IA/II Raincloud Plot (Fig S2B,D,F)
+
+#alternatively use .png, .jpg, etc.
+if (!male.only){
+  file.name <- paste('figures/fig_s2/raincloud_', tolower(var.label), '_adhd_signif.tiff', sep = '')
+} else{
+  file.name <- paste('figures/fig_s2/raincloud', substr(var.type,5, 50), '_adhd_male.tiff', sep = '')
+}
+
+ggsave(file.name, adhd.raincloud, width=2400, height=1600, units = 'px', dpi=300)
+```
+ 
+```{r}
+#Two-Group Raincloud Plot (TDC vs ASC-IA vs ASC-II) (Fig S2A,C,E)
+
+two.adhd.colours <- c('ASC - ADHD' = 'red', 'ASC + ADHD' = '#f27cc7')
+
+levels(df.var.behav$adhd) <- c('ASC - ADHD', 'ASC + ADHD')
+two.adhd.raincloud <- df.var.behav %>% 
+  #mutate(adhd = fct_relabel(adhd,)) %>%
+  ggplot(aes(x=adhd, y=!!var.type, colour = adhd, fill = adhd)) +
+  geom_rain(point.args = list(size = 3.5)) +
+  geom_signif(comparisons = list(c("ASC - ADHD", "ASC + ADHD")),
+              annotation = as.vector(symnum(df.signif$p.group[11], cutpoints = c(0, 0.001, 0.01, 0.05, Inf), 
+                                  symbols = c("***", "**", "*", "NS."))),
+              map_signif_level = TRUE, step_increase = 0.1, 
+              textsize = 6, colour = 'black') +
+  theme(text = element_text(face = "bold"))+
+  ylab(bquote(bold(VAR[.(var.label)])))+labs(fill = 'Group')+
+  theme(axis.text.x=element_text(size=23, face='bold'), axis.text.y=element_text(size=23, face='bold'),
+        axis.title.x=element_text(size=20, face='bold'), axis.title.y=element_blank(),
+        legend.position = 'none') +
+  scale_colour_manual(values=two.adhd.colours) + 
+  scale_fill_manual(values= alpha(two.adhd.colours, 0.5)) + 
+  coord_flip()
+plot(two.adhd.raincloud)
+```
+
+```{r}
+#save ADHD and IA/II Raincloud Plot (Fig S2A,C,E)
+
+#alternatively use .png, .jpg, etc.
+if (!male.only){
+  file.name <- paste('figures/fig_s2/raincloud_', tolower(var.label), '_2group_adhd.tiff', sep = '')
+} else{
+  file.name <- paste('figures/fig_s2/raincloud', substr(var.type,5, 50), '_2group_adhd_male.tiff', sep = '')
+}
+
+ggsave(file.name, two.adhd.raincloud, width=2400, height=1600, units = 'px', dpi=300)
+```
+
+---
+RaincloudPlots.Rmd
+This script is used to generate raincloud plots (Fig. 3, S1, S2)
+---
+
+```{r}
+#setting up libraries and data
+
+library(ggplot2)
+library(ggrain)
+library(ggpubr)
+library(forcats)
+source('IdiosyncrasyUtilities.R')
+
+male.only <- FALSE
+df.var.behav <- load.data("data/variability_behaviour.csv", male.only)
+
+var.type <- 'var.whole' #options: var.whole, var.within, var.tdc
+if (var.type == 'var.tdc'){
+  var.label <- 'TDC' #to be used in x axis
+} else{
+  var.label <- paste(toupper(substr(var.type,5,5)), substr(var.type, 6,50), sep = '') 
+}
+var.type <- sym(var.type)
+
 df.signif <- read.csv('group_var_stats_tdc.csv', row.names = 1)
 
 ```

@@ -1,0 +1,353 @@
+---
+GroupVarComparison.Rmd
+This script is used to compare idiosyncrasy (variability) between groups (Table S3)
+---
+
+```{r}
+#loading data
+source('IdiosyncrasyUtilities.R')
+library(tibble)
+library(lsr)
+
+male.only <- TRUE
+df.var.behav <- load.data('data/variability_behaviour.csv', male.only)
+
+tdc.ia.data <- df.var.behav[df.var.behav$group == "TDC" | df.var.behav$group == "ASC-IA",]
+tdc.ii.data <- df.var.behav[df.var.behav$group == "TDC" | df.var.behav$group == "ASC-II",]
+ii.ia.data <- df.var.behav[df.var.behav$group == "ASC-II" | df.var.behav$group == "ASC-IA",]
+
+
+var.type <- 'var.whole' #options: var.whole, var.within, var.tdc
+#Table S3 shows var.whole results for the male-only sensitivity analysis. The mixed sex results are presented as raincloud plots (RaincloudPlots.Rmd) in the paper, but can also be calculated with this script.
+```
+
+```{r}
+#are there group differences? (three groups: TDC vs ASC-IA vs ASC-II)
+three.formula <- as.formula(ifelse(!male.only, 
+                            paste(var.type, '~ group + sex + age + mean.fd'),
+                            paste(var.type, '~ group + age + mean.fd')))
+
+three.ancova <- aov(three.formula, data = df.var.behav)
+
+print('TDC vs ASC-IA vs ASC-II ANCOVA Results')
+summary(three.ancova)
+
+print('Eta Squared')
+etaSquared(three.ancova)
+```
+
+```{r}
+#are there group differences? (two groups: TDC vs ASC-Whole)
+two.formula <- as.formula(ifelse(!male.only, 
+                            paste(var.type, '~ group.2 + sex + age + mean.fd'),
+                            paste(var.type, '~ group.2 + age + mean.fd')))
+
+two.ancova <- aov(two.formula, data = df.var.behav)
+
+print('TDC vs ASC-Whole ANCOVA Results')
+summary(two.ancova)
+
+print('Eta Squared')
+etaSquared(two.ancova)
+
+print("Unadjusted Difference (TDC - ASC-Whole)")
+mean(df.var.behav[df.var.behav$group == "TDC", var.type]) - 
+  mean(df.var.behav[df.var.behav$group.2 == "ASC", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group.2 == 'TDC', var.type],
+        df.var.behav[df.var.behav$group.2 == 'ASC', var.type])
+```
+
+```{r}
+#are there differences between TDC and ASC-IA?
+three.formula <- as.formula(ifelse(!male.only, 
+                            paste(var.type, '~ group + sex + age + mean.fd'),
+                            paste(var.type, '~ group + age + mean.fd')))
+tdc.ia.ancova <- aov(three.formula, data = tdc.ia.data)
+
+print('TDC vs ASC-IA ANCOVA Results')
+summary(tdc.ia.ancova)
+
+print("Unadjusted Difference (TDC - ASC-IA)")
+mean(df.var.behav[df.var.behav$group == "TDC", var.type]) - 
+  mean(df.var.behav[df.var.behav$group == "ASC-IA", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group == 'TDC', var.type],
+        df.var.behav[df.var.behav$group == 'ASC-IA', var.type])
+```
+
+```{r}
+#are there differences between TDC and ASC-II?
+three.formula <- as.formula(ifelse(!male.only, 
+                            paste(var.type, '~ group + sex + age + mean.fd'),
+                            paste(var.type, '~ group + age + mean.fd')))
+tdc.ii.ancova <- aov(three.formula, data = tdc.ii.data)
+
+print('TDC vs ASC-II ANCOVA Results')
+summary(tdc.ii.ancova)
+
+print("Unadjusted Difference (TDC - ASC-II)")
+mean(df.var.behav[df.var.behav$group == "TDC", var.type]) - mean(df.var.behav[df.var.behav$group == "ASC-II", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group == 'TDC', var.type],
+        df.var.behav[df.var.behav$group == 'ASC-II', var.type])
+```
+
+```{r}
+#are there differences between ASC-II and ASC-IA?
+three.formula <- as.formula(ifelse(!male.only, 
+                            paste(var.type, '~ group + sex + age + mean.fd'),
+                            paste(var.type, '~ group + age + mean.fd')))
+ii.ia.ancova <- aov(three.formula, data = ii.ia.data)
+
+print('ASC-II vs ASC-IA ANCOVA Results')
+summary(ii.ia.ancova)
+
+print("Unadjusted Difference (ASC-II - ASC-IA)")
+mean(df.var.behav[df.var.behav$group == "ASC-II", var.type]) - 
+  mean(df.var.behav[df.var.behav$group == "ASC-IA", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group == 'ASC-II', var.type],
+        df.var.behav[df.var.behav$group == 'ASC-IA', var.type])
+```
+
+
+```{r}
+#Supplementary Analysis: ASC-Whole + ADHD vs ASC-Whole - ADHD
+
+asc.adhd.formula <- as.formula(ifelse(!male.only, 
+                                      paste(var.type, '~ adhd + sex + age + mean.fd'),
+                                      paste(var.type, '~ adhd + age + mean.fd')))
+
+asc.adhd.ancova <- aov(asc.adhd.formula, data = ii.ia.data)
+
+print('ASC-Whole + ADHD vs ASC-Whole - ADHD Results')
+summary(asc.adhd.ancova)
+
+print("Unadjusted Difference (ASC + ADHD - ASC - ADHD)")
+mean(df.var.behav[df.var.behav$adhd == 1, var.type]) - 
+  mean(df.var.behav[df.var.behav$adhd == 0, var.type])
+
+print('Eta Squared')
+etaSquared(asc.adhd.ancova)
+```
+
+```{r}
+#Supplementary Analysis: ASC-IA + ADHD vs ASC-IA - ADHD vs ASC-II + ADHD vs ASC-II - ADHD
+
+ia.ii.adhd.formula <- as.formula(ifelse(!male.only, 
+                                        paste(var.type, '~ group.adhd + sex + age + mean.fd'),
+                                        paste(var.type, '~ group.adhd + age + mean.fd')))
+
+ii.ia.adhd.ancova <- aov(ia.ii.adhd.formula, data = ii.ia.data)
+
+print('ASC-IA + ADHD vs ASC-IA - ADHD Results')
+summary(ii.ia.adhd.ancova)
+
+print('Eta Squared')
+etaSquared(ii.ia.adhd.ancova)
+```
+
+```{r}
+#Is there a difference between ASC-IA + ADHD vs ASC-IA - ADHD?
+# 0 = no ADHD, 1 = ADHD (i.e. ia1 means ASC-IA + ADHD)
+
+ia1.ia0.data <- ii.ia.data[ii.ia.data$group.adhd == 'ASC-IA + ADHD' | ii.ia.data$group.adhd == 'ASC-IA - ADHD',]
+
+ia.ii.adhd.formula <- as.formula(ifelse(!male.only, 
+                                        paste(var.type, '~ group.adhd + sex + age + mean.fd'),
+                                        paste(var.type, '~ group.adhd + age + mean.fd')))
+
+ia1.ia0.ancova <- aov(ia.ii.adhd.formula, data = ia1.ia0.data)
+
+print('ASC-IA + ADHD - ASC-IA - ADHD ANCOVA Results')
+summary(ia1.ia0.ancova)
+
+print("Unadjusted Difference (ASC-IA + ADHD - ASC-IA - ADHD)")
+mean(df.var.behav[df.var.behav$group.adhd == "ASC-IA + ADHD", var.type]) - mean(df.var.behav[df.var.behav$group.adhd == "ASC-IA - ADHD", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group.adhd == 'ASC-IA + ADHD', var.type],
+        df.var.behav[df.var.behav$group.adhd == 'ASC-IA - ADHD', var.type])
+```
+
+```{r}
+#Is there a difference between ASC-IA + ADHD vs ASC-II + ADHD?
+
+ia1.ii1.data <- ii.ia.data[ii.ia.data$group.adhd == 'ASC-IA + ADHD' | ii.ia.data$group.adhd == 'ASC-II + ADHD',]
+
+ia.ii.adhd.formula <- as.formula(ifelse(!male.only, 
+                                        paste(var.type, '~ group.adhd + sex + age + mean.fd'),
+                                        paste(var.type, '~ group.adhd + age + mean.fd')))
+
+ia1.ii1.ancova <- aov(three.formula, data = ia1.ii1.data)
+
+print('ASC-IA + ADHD - ASC-II + ADHD ANCOVA Results')
+summary(ia1.ii1.ancova)
+
+print("Unadjusted Difference (ASC-IA + ADHD - ASC-II + ADHD)")
+mean(df.var.behav[df.var.behav$group.adhd == "ASC-IA + ADHD", var.type]) - mean(df.var.behav[df.var.behav$group.adhd == "ASC-II + ADHD", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group.adhd == 'ASC-IA + ADHD', var.type],
+        df.var.behav[df.var.behav$group.adhd == 'ASC-II + ADHD', var.type])
+```
+
+```{r}
+#Is there a difference between ASC-IA + ADHD vs ASC-II - ADHD?
+
+ia1.ii0.data <- ii.ia.data[ii.ia.data$group.adhd == 'ASC-IA + ADHD' | ii.ia.data$group.adhd == 'ASC-II - ADHD',]
+
+ia.ii.adhd.formula <- as.formula(ifelse(!male.only, 
+                                        paste(var.type, '~ group.adhd + sex + age + mean.fd'),
+                                        paste(var.type, '~ group.adhd + age + mean.fd')))
+
+ia1.ii0.ancova <- aov(ia.ii.adhd.formula, data = ia1.ii0.data)
+
+print('ASC-IA + ADHD - ASC-II + ADHD ANCOVA Results')
+summary(ia1.ii0.ancova)
+
+print("Unadjusted Difference (ASC-IA + ADHD - ASC-II - ADHD)")
+mean(df.var.behav[df.var.behav$group.adhd == "ASC-IA + ADHD", var.type]) - mean(df.var.behav[df.var.behav$group.adhd == "ASC-II - ADHD", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group.adhd == 'ASC-IA + ADHD', var.type],
+        df.var.behav[df.var.behav$group.adhd == 'ASC-II - ADHD', var.type])
+```
+
+```{r}
+#Is there a difference between ASC-IA - ADHD vs ASC-II + ADHD?
+
+ia0.ii1.data <- ii.ia.data[ii.ia.data$group.adhd == 'ASC-IA - ADHD' | ii.ia.data$group.adhd == 'ASC-II + ADHD',]
+
+ia.ii.adhd.formula <- as.formula(ifelse(!male.only, 
+                                        paste(var.type, '~ group.adhd + sex + age + mean.fd'),
+                                        paste(var.type, '~ group.adhd + age + mean.fd')))
+
+ia0.ii1.ancova <- aov(ia.ii.adhd.formula, data = ia0.ii1.data)
+
+print('ASC-IA + ADHD - ASC-II + ADHD ANCOVA Results')
+summary(ia0.ii1.ancova)
+
+print("Unadjusted Difference (ASC-IA + ADHD - ASC-II + ADHD)")
+mean(df.var.behav[df.var.behav$group.adhd == "ASC-IA - ADHD", var.type]) - mean(df.var.behav[df.var.behav$group.adhd == "ASC-II + ADHD", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group.adhd == 'ASC-IA - ADHD', var.type],
+        df.var.behav[df.var.behav$group.adhd == 'ASC-II + ADHD', var.type])
+```
+
+```{r}
+#Is there a difference between ASC-IA - ADHD vs ASC-II - ADHD?
+
+ia0.ii0.data <- ii.ia.data[ii.ia.data$group.adhd == 'ASC-IA - ADHD' | ii.ia.data$group.adhd == 'ASC-II - ADHD',]
+
+ia.ii.adhd.formula <- as.formula(ifelse(!male.only, 
+                                        paste(var.type, '~ group.adhd + sex + age + mean.fd'),
+                                        paste(var.type, '~ group.adhd + age + mean.fd')))
+
+ia0.ii0.ancova <- aov(ia.ii.adhd.formula, data = ia0.ii0.data)
+
+print('ASC-IA + ADHD - ASC-II + ADHD ANCOVA Results')
+summary(ia0.ii0.ancova)
+
+print("Unadjusted Difference (ASC-IA + ADHD - ASC-II - ADHD)")
+mean(df.var.behav[df.var.behav$group.adhd == "ASC-IA - ADHD", var.type]) - mean(df.var.behav[df.var.behav$group.adhd == "ASC-II - ADHD", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group.adhd == 'ASC-IA - ADHD', var.type],
+        df.var.behav[df.var.behav$group.adhd == 'ASC-II - ADHD', var.type])
+```
+
+```{r}
+#Is there a difference between ASC-IA - ADHD vs ASC-II - ADHD?
+
+ii1.ii0.data <- ii.ia.data[ii.ia.data$group.adhd == 'ASC-II + ADHD' | ii.ia.data$group.adhd == 'ASC-II - ADHD',]
+
+ii1.ii0.formula <- as.formula(paste(var.type, '~ group.adhd + age + mean.fd')) #all participants male
+
+ii1.ii0.ancova <- aov(ii1.ii0.formula, data = ii1.ii0.data)
+
+print('ASC-IA + ADHD - ASC-II + ADHD ANCOVA Results')
+summary(ii1.ii0.ancova)
+
+print("Unadjusted Difference (ASC-IA + ADHD - ASC-II - ADHD)")
+mean(df.var.behav[df.var.behav$group.adhd == "ASC-II + ADHD", var.type]) - mean(df.var.behav[df.var.behav$group.adhd == "ASC-II - ADHD", var.type])
+
+print("Cohen's D")
+cohensD(df.var.behav[df.var.behav$group.adhd == 'ASC-II + ADHD', var.type],
+        df.var.behav[df.var.behav$group.adhd == 'ASC-II - ADHD', var.type])
+```
+
+```{r}
+#Bonferroni Correction for pairwise ANCOVAS and TDC vs ASC-Whole Results
+
+#only 3 variables if male.only = TRUE
+
+ii1.ii0.results <- summary(ii1.ii0.ancova)[[1]][['Pr(>F)']][1:3]
+if (!male.only){
+  ii1.ii0.results <- append(ii1.ii0.results[1:3], NA, after = 2)
+}
+
+p.table <- t(data.frame(summary(tdc.ia.ancova)[[1]][['Pr(>F)']][1:4-male.only],
+                     summary(tdc.ii.ancova)[[1]][['Pr(>F)']][1:4-male.only],
+                     summary(ii.ia.ancova)[[1]][['Pr(>F)']][1:4-male.only],
+                     summary(two.ancova)[[1]][['Pr(>F)']][1:4-male.only],
+                     summary(ia1.ia0.ancova)[[1]][['Pr(>F)']][1:4-male.only],
+                     summary(ia1.ii1.ancova)[[1]][['Pr(>F)']][1:4-male.only],
+                     summary(ia1.ii0.ancova)[[1]][['Pr(>F)']][1:4-male.only],
+                     summary(ia0.ii1.ancova)[[1]][['Pr(>F)']][1:4-male.only],
+                     summary(ia0.ii0.ancova)[[1]][['Pr(>F)']][1:4-male.only],
+                     ii1.ii0.results,
+                     summary(asc.adhd.ancova)[[1]][['Pr(>F)']][1:4-male.only]))
+p.table <- data.frame(p.table)
+
+columns <- c('p.group', 'p.age', 'p.sex', 'p.fd')
+rows <- c('tdc.ia', 'tdc.ii', 'ii.ia', 'tdc.asc.whole', 'ia1.ia0', 'ia1.ii1', 
+          'ia1.ii0', 'ia0.ii1', 'ia0.ii0', 'ii1.ii', 'adhd.noadhd')
+
+if (male.only){
+  columns <- columns[columns != 'p.sex']
+}
+
+colnames(p.table) <- columns
+rownames(p.table) <- rows
+
+p.table <- add_column(p.table, 
+                      p.fwe.group = c(p.adjust(p.table$p.group[1:3], method = 'bonferroni'), NA,
+                                      p.adjust(p.table$p.group[5:10], method = 'bonferroni'), NA),
+                      .after = 'p.group')
+p.table <- add_column(p.table, 
+                      p.fwe.age = c(p.adjust(p.table$p.age[1:3], method = 'bonferroni'), NA,
+                                    p.adjust(p.table$p.age[5:10], method = 'bonferroni'), NA),
+                      .after = 'p.age')
+
+if (!male.only){
+  p.table <- add_column(p.table, 
+                      p.fwe.sex = c(p.adjust(p.table$p.sex[1:3], method = 'bonferroni'), NA,
+                                    p.adjust(p.table$p.sex[5:9], method = 'bonferroni'), NA, NA),
+                      .after = 'p.sex')
+}
+
+p.table <- add_column(p.table, 
+                      p.fwe.fd = c(p.adjust(p.table$p.fd[1:3], method = 'bonferroni'), NA,
+                                   p.adjust(p.table$p.fd[5:10], method = 'bonferroni'), NA),
+                      .after = 'p.fd')
+
+p.table
+```
+
+```{r}
+#Write results to csv
+if (!male.only){
+  file.name <- paste('tables/table_s3/group_var_stats_', substr(var.type,5, 50), '.csv', sep = '')
+} else{
+  file.name <- paste('tables/table_s3/group_var_stats_', substr(var.type,5, 50), '_male.csv', sep = '')
+}
+
+write.csv(p.table, file.name)
+```

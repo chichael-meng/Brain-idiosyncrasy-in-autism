@@ -1,0 +1,93 @@
+---
+Demographics.Rmd
+This script is used to calculate the demographic/clinical characteristics of the sample (Table 1)
+---
+
+```{r}
+#library(devtools)
+source('IdiosyncrasyUtilities.R')
+male.only <- FALSE
+
+df.var.behav <- load.data("data/variability_behaviour.csv", male.only)
+```
+
+```{r}
+#Categorical Variables/Chi-Square Tests
+categorical <- c('sex', 'drug', 'comorbidity')
+columns <- c('ratio.tdc', 'ratio.ia', 'ratio.ii', 'p.overall', 'p.tdc.ia', 'p.tdc.ii', 'p.ii.ia')
+groups <- c('TDC', 'ASC-IA', 'ASC-II')
+
+
+df.cat <- data.frame(matrix(nrow = length(categorical), ncol = length(columns)))
+rownames(df.cat) <- categorical
+colnames(df.cat) <- columns
+
+df.cat$ratio.tdc <- lapply(categorical, calc.ratio, 'TDC', df.var.behav) 
+df.cat$ratio.ia <- lapply(categorical, calc.ratio, 'ASC-IA', df.var.behav)
+df.cat$ratio.ii <- lapply(categorical, calc.ratio, 'ASC-II', df.var.behav)
+
+df.cat$p.overall <- sapply(categorical, chisq.p, df = df.var.behav)
+df.cat$p.tdc.ia <- sapply(categorical, chisq.p, 'ASC-II', df.var.behav) 
+df.cat$p.tdc.ii <- sapply(categorical, chisq.p, 'ASC-IA', df.var.behav)
+df.cat$p.ii.ia <- sapply(categorical, chisq.p, 'TDC', df.var.behav)
+
+df.cat
+
+```
+
+```{r}
+#Write categorical results to csv
+
+df.cat$ratio.tdc <- as.character(df.cat$ratio.tdc)
+df.cat$ratio.ia <- as.character(df.cat$ratio.ia)
+df.cat$ratio.ii <- as.character(df.cat$ratio.ii)
+
+write.csv(df.cat, 'tables/table_1/demographic_categorical_stats.csv')
+```
+
+```{r}
+#Numerical Variables: Mean/SD
+numerical <- c('age', 'mean.fd', 'ados', 'nviq', 'vabs.total', 'srs.t', 'rbs.total', 'ssp.total', 'brief.gec', 'snap.t')
+
+columns <- c('tdc.mean', 'tdc.sd', 'ia.mean', 'ia.sd', 'ii.mean', 'ii.sd')
+
+df.mean.sd <- data.frame(matrix(nrow = length(numerical), ncol = length(columns)))
+
+
+colnames(df.mean.sd) <- columns
+
+
+df.mean.sd$tdc.mean <- sapply(numerical, calc.mean, 'TDC', df.var.behav)
+df.mean.sd$tdc.sd <- sapply(numerical, calc.sd, 'TDC', df.var.behav)
+df.mean.sd$ia.mean <- sapply(numerical, calc.mean, 'ASC-IA', df.var.behav)
+df.mean.sd$ia.sd <- sapply(numerical, calc.sd, 'ASC-IA', df.var.behav)
+df.mean.sd$ii.mean <- sapply(numerical, calc.mean, 'ASC-II', df.var.behav)
+df.mean.sd$ii.sd <- sapply(numerical, calc.sd, 'ASC-II', df.var.behav)
+
+#Numerical Variables: ANOVA
+
+columns <- c('p.overall', 'p.tdc.ia', 'diff.tdc.ia', 'p.tdc.ii', 'diff.td.ia', 'p.ii.ia', 'diff.ii.ia')
+df.anova <- data.frame(matrix(nrow = length(numerical), ncol = length(columns)))
+colnames(df.anova) <- columns
+rownames(df.anova) <- numerical
+
+df.anova$p.overall <- sapply(numerical, anova.p, df.var.behav)
+
+#p value and difference for each pairwise comparison
+df.anova[,2:ncol(df.anova)] <- t(sapply(numerical, tukey.vector, df.var.behav))
+
+df.mean.sd
+df.anova
+
+```
+
+
+```{r}
+#Write numerical results to csv
+
+df.num <- cbind(df.mean.sd, df.anova)
+
+write.csv(df.num, 'tables/table_1/demographic_numerical_stats.csv')
+
+```
+

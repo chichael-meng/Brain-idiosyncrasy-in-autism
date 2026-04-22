@@ -1,0 +1,159 @@
+---
+ScatterplotGAM.Rmd
+This script is used to fit the generalized additive models (GAMs) and plot them with scatterplots. (Fig 4, Fig S3-7, Table S2, Table S4)
+---
+
+```{r}
+#loading data
+source('IdiosyncrasyUtilities.R')
+library(tibble)
+library(lsr)
+library(ggplot2)
+
+
+male.only <- FALSE #sensitivity analysis
+all.linear <- FALSE #should all behavioural regressors be treated as linear?
+
+
+#df.var.behav <- load.data("Schaefer200+Tian+Suit_spmT_0001_var_scores.csv", male.only)
+df.var.behav <- load.data('data/variability_behaviour.csv', male.only)
+
+
+var.type <- 'var.whole' #options: var.whole, var.within, var.tdc
+
+#psych.tests <- c('ADOS-2 CSS', 'NVIQ','VABS-ABC', 'SRS Total', 'RBS-R Total', 'SSP Total', 'BRIEF-GEC', 'SNAP-IV Total')
+psych.tests <- c('nviq','rbs.total','srs.t','ssp.total', 'ados',   'brief.gec', 'snap.t', 'vabs.total')
+
+
+test.labels <- c('ados'= 'ADOS-2 CSS', 'nviq' = 'NVIQ', 'vabs.total' = 'VABS-ABC', 'srs.t'= 'SRS Total', 'rbs.total' = 'RBS-R Total', 'ssp.total' = 'SSP Total', 'brief.gec' = 'BRIEF-GEC', 'snap.t' = 'SNAP-IV Total')
+var.labels <- c('var.whole' = 'Whole', 'var.within' = 'Within', 'var.tdc' = 'TDC')
+
+linear <- c('ados', 'snap.t', 'vabs.total', 'brief.gec')
+```
+
+```{r}
+#Statistical significance table (Table S2, S4)
+df.sig <- data.frame(behav.p = rep(NA, length(psych.tests)),
+                     age.p = rep(NA, length(psych.tests)),
+                     fd.p = rep(NA, length(psych.tests)))
+
+if (!male.only){
+  add_column(df.sig, sex.p = rep(NA, length(psych.tests)), .after = 'age.p')
+
+}
+
+for (i in 1:length(psych.tests)){ 
+      #define gam
+    test <- psych.tests[i] #column name of psych test in df.var.behav
+    current.data <- df.var.behav[!is.na(df.var.behav[test]),] #remove participants with missing values for current psych test
+  
+    current.gam <- fit.gam(test = test, linear = linear, male.only = male.only, current.data = current.data)
+    
+    
+  if (test %in% linear){
+    df.sig[i, 'behav.p'] <- summary(current.gam)$p.pv['get(test)']
+  } else {
+    df.sig[i, 'behav.p'] <- summary(current.gam)$s.table['s(get(test))', 'p-value']
+  }
+  
+  df.sig[i, 'age.p'] <- summary(current.gam)$p.pv['age']
+  if (!male.only){
+    df.sig[i, 'sex.p'] <- summary(current.gam)$p.pv['sex1']
+  }
+  df.sig[i, 'fd.p'] <- summary(current.gam)$s.table['s(mean.fd)', 'p-value']
+  df.sig[i, 'r2.adj'] <- summary(current.gam)$r.sq
+}
+
+n.vars <- 4 - male.only
+orig.vars <- colnames(df.sig)
+for (i in 1:n.vars){
+  
+#T/F statistic
+  if (orig.vars[i] == 'sex.p'){
+    pred.name <- 'sex1'
+  } else if (orig.vars[i] == 'fd.p'){
+    pred.name <- 'mean.fd'
+  } else{
+    pred.name <- strsplit(orig.vars[i], '.', fixed = TRUE)[[1]][1]
+  }
+
+  tf.name <- paste(strsplit(orig.vars[i], '.', fixed = TRUE)[[1]][1], '.tf', sep = '')
+  df.sig <- add_column(df.sig, '{tf.name}' := sapply(psych.tests, get.tf, linear = linear, var.type = var.type, predictor = pred.name, df = df.var.behav, male.only = male.only), .before = orig.vars[i])
+  
+  q.name <- paste(strsplit(orig.vars[i], '.', fixed = TRUE)[[1]][1], '.q', sep = '')
+  df.sig <- add_column(df.sig, '{q.name}' := p.adjust(df.sig[,orig.vars[i]], method = 'BH'), .after = orig.vars[i])
+      
+  sig.name <- paste(strsplit(orig.vars[i], '.', fixed = TRUE)[[1]][1], '.sig', sep = '')
+  df.sig <- add_column(df.sig, '{sig.name}' := df.sig[,q.name] <= 0.05, .after = q.name)
+}
+
+df.sig <- add_column(df.sig, test = psych.tests, .before = 'behav.tf')
+
+df.sig
+```
+
+```{r}
+#Write results to csv (Table S2, S4)
+
+if (male.only){
+  csv.name <- paste('tables/table_s4/table_s4.csv')
+} else{
+  csv.name <- paste('tables/table_s2/table_s2.csv')
+}
+
+write.csv(df.sig, csv.name, row.names = FALSE)
+```
+
+```{r}
+#Create single scatterplot
+
+test <- 'nviq' #options in test.labels
+current.data <- df.var.behav[!is.na(df.var.behav[test]),]
+current.gam <- fit.gam(test = test, linear = linear, male.only = male.only, current.data = current.data)
+
+#test.labels <- c('ados'= 'ADOS-2 CSS', 'nviq' = 'NVIQ', 'vabs.total' = 'VABS-ABC', 'srs.t'= 'SRS Total', 'rbs.total' = 'RBS-R Total', 'ssp.total' = 'SSP Total', 'brief.gec' = 'BRIEF-GEC', 'snap.t' = 'SNAP-IV Total')
+
+var.labels <- c('var.whole' = 'Whole', 'var.within' = 'Within', 'var.tdc' = 'TDC')
+
+group.colours <- c('TDC' = 'blue', 'ASC' = 'red')
+
+scatterplot <- fit.scatterplot(test = test, current.data = current.data, var.type = var.type, linear = linear, var.labels = var.labels, group.colours = group.colours, current.gam = current.gam)
+
+plot(scatterplot)
+
+#save as image
+#ggsave(filename = "name your plot", scatterplot, width=2400, height=1600, units = 'px', dpi=300)
+```
+```{r}
+group.colours <- c('TDC' = 'blue', 'ASC' = 'red')
+
+if (var.type == 'var.whole' & !all.linear){
+  fig.num <- 'fig_4'
+  } else if (var.type == 'var.within' & !all.linear){
+  fig.num <- 'fig_s3'
+  } else if (var.type == 'var.tdc' & !all.linear){
+  fig.num <- 'fig_s4'
+  } else if (var.type == 'var.whole' & all.linear){
+  fig.num <- 'fig_s5'
+  } else if (var.type == 'var.within' & all.linear){
+  fig.num <- 'fig_s6'
+  } else if (var.type == 'var.tdc' & all.linear){
+  fig.num <- 'fig_s7'
+  }
+    
+for (test in names(test.labels)){
+  current.data <- df.var.behav[!is.na(df.var.behav[test]),]
+  if (!all.linear){
+    current.gam <- fit.gam(test = test, linear = linear, male.only = male.only, current.data = current.data)
+    scatterplot <- fit.scatterplot(test = test, current.data = current.data, var.type = var.type, linear = linear, var.labels = var.labels, group.colours = group.colours, current.gam = current.gam)
+  } else{
+    current.gam <- fit.gam(test = test, linear = psych.tests, male.only = male.only, current.data = current.data)
+    scatterplot <- fit.scatterplot(test = test, current.data = current.data, var.type = var.type, linear = psych.tests, var.labels = var.labels, group.colours = group.colours, current.gam = current.gam) #all psych tests are linear
+  }
+  
+  plot(scatterplot)
+  scatterplot_path <- paste('figures/', fig.num, '/', test, '_scatterplot.tiff',sep = '')
+  ggsave(filename = scatterplot_path, scatterplot, width=2400, height=1600, units = 'px', dpi=300)
+}
+```
+

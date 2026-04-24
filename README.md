@@ -58,6 +58,6 @@ Evaluate brain-behaviour correlations and graphically represent them with scatte
 
 ___
 
-Please direct any code-related enquiries to first-author MC (michaelcheng.cheng@mail.utoronto.ca) and general enquiries to senior author HYL (hsiang-yuan.lin@camh.ca). The raw imaging data is available upon reasonable request.  
+Please direct any code-related enquiries to first-author MC (michaelcheng.cheng@mail.utoronto.ca) and general enquiries to corresponding/senior author HYL (hsiang-yuan.lin@camh.ca). The raw imaging data is available upon reasonable request.  
 
 **Thank you very much for your interest in our work! :D**
